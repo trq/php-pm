@@ -1,15 +1,28 @@
 {
-    "name": "marcj/php-pm",
+    "name": "php-pm/php-pm",
     "require": {
-        "symfony/console": "~2.4",
-        "react/react": "0.3.3",
-        "stack/builder": "1.0.*@dev",
-        "symfony/http-foundation": "2.4.*@dev",
-        "symfony/http-kernel": "2.4.*@dev"
+        "symfony/console": "^2.6|^3.0",
+        "symfony/process": "^2.6|^3.0",
+        "react/event-loop": "^0.4",
+        "react/stream": "^0.4",
+        "react/http": "dev-master",
+        "react/socket-client": "^0.5.0",
+        "mkraemer/react-pcntl": "2.0.*"
+    },
+    "require-dev": {
+        "php-pm/httpkernel-adapter": "dev-master"
     },
     "autoload": {
         "psr-4": {
             "PHPPM\\": ""
         }
-    }
+    },
+    "suggest": {
+        "php-pm/httpkernel-adapter": "HttpKernel adapter for Symfony and Laravel frameworks",
+        "php-pm/zend-adapter": "Zend application framework adapter",
+        "ext-libevent": "Allows for use of a more performant event-loop implementation.",
+        "ext-libev": "Allows for use of a more performant event-loop implementation.",
+        "ext-event": "Allows for use of a more performant event-loop implementation."
+    },
+    "bin": ["bin/ppm"]
 }

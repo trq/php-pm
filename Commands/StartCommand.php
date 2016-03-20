@@ -5,12 +5,13 @@ namespace PHPPM\Commands;
 use PHPPM\ProcessManager;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Output\OutputInterface;
 
 class StartCommand extends Command
 {
+    use ConfigTrait;
+
     /**
      * {@inheritdoc}
      */
@@ -20,14 +21,11 @@ class StartCommand extends Command
 
         $this
             ->setName('start')
-            ->addArgument('working-directory', InputArgument::OPTIONAL, 'The root of your appplication.', './')
-            ->addOption('bridge', null, InputOption::VALUE_OPTIONAL, 'The bridge we use to convert a ReactPHP-Request to your target framework.', 'httpkernel')
-            ->addOption('port', null, InputOption::VALUE_OPTIONAL, 'Load-Balancer port. Default is 8080', 8080)
-            ->addOption('workers', null, InputOption::VALUE_OPTIONAL, 'Worker count. Default is 8. Should be minimum equal to the number of CPU cores.', 8)
-            ->addOption('app-env', null, InputOption::VALUE_OPTIONAL, 'The environment that your application will use to bootstrap (if any)', 'dev')
-            ->addOption('bootstrap', null, InputOption::VALUE_OPTIONAL, 'The class that will be used to bootstrap your application', 'PHPPM\Bootstraps\Symfony')
+            ->addArgument('working-directory', InputArgument::OPTIONAL, 'The root of your application.', './')
             ->setDescription('Starts the server')
         ;
+        
+        $this->configurePPMOptions($this);
     }
 
     protected function execute(InputInterface $input, OutputInterface $output)
@@ -35,25 +33,30 @@ class StartCommand extends Command
         if ($workingDir = $input->getArgument('working-directory')) {
             chdir($workingDir);
         }
+        $config = $this->loadConfig($input);
 
-        $config = [];
-        if (file_exists('./ppm.json')) {
-            $config = json_decode(file_get_contents('./ppm.json'), true);
+        if (file_exists($this->file)) {
+            $modified = '';
+            $fileConfig = json_decode(file_get_contents($this->file), true);
+            if (json_encode($fileConfig) !== json_encode($config)) {
+                $modified = ', modified by command arguments';
+            }
+            $output->writeln(sprintf('<info>Read configuration %s%s.</info>', realpath($this->file), $modified));
         }
+        $output->writeln(sprintf('<info>%s</info>', getcwd()));
 
-        $bridge        = isset($config['bridge'])  ? $config['bridge']  : $input->getOption('bridge');
-        $port          = isset($config['port'])    ? $config['port']    : (int) $input->getOption('port');
-        $workers       = isset($config['workers']) ? $config['workers'] : (int) $input->getOption('workers');
-        $appenv        = isset($config['appenv']) ? $config['appenv'] : $input->getOption('app-env');
-        $appBootstrap  = isset($config['bootstrap']) ? $config['bootstrap'] : $input->getOption('bootstrap');
+        $this->renderConfig($output, $config);
 
-        $handler = new ProcessManager($port, $workers);
+        $handler = new ProcessManager($output, $config['port'], $config['host'], $config['workers']);
 
-        $handler->setBridge($bridge);
-        $handler->setAppEnv($appenv);
-        $handler->setAppBootstrap($appBootstrap);
+        $handler->setBridge($config['bridge']);
+        $handler->setAppEnv($config['app-env']);
+        $handler->setDebug((boolean)$config['debug']);
+        $handler->setLogging((boolean)$config['logging']);
+        $handler->setAppBootstrap($config['bootstrap']);
+        $handler->setMaxRequests($config['max-requests']);
+        $handler->setPhpCgiExecutable($config['php-cgi']);
 
         $handler->run();
     }
-
 }
